@@ -1,0 +1,23 @@
+name: Simple Test Workflow
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4 # v3からv4に更新
+
+      - name: Create test file
+        run: echo "Test content" > test.txt
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4 # v3からv4に更新
+        with:
+          name: test-file
+          path: test.txt
