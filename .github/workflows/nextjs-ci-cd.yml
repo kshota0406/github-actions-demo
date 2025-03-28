@@ -1,131 +1,39 @@
-name: Next.js CI/CD with pnpm
+name: Basic Next.js Build
 
-# ワークフローをトリガーするイベント
 on:
   push:
     branches: [main]
-  pull_request:
-    branches: [main]
+  workflow_dispatch:
 
 jobs:
-  # ビルドジョブ
   build:
     runs-on: ubuntu-latest
 
     steps:
-      # リポジトリのチェックアウト
-      - name: リポジトリをチェックアウト
+      - name: Checkout repository
         uses: actions/checkout@v3
 
-      # Node.jsのセットアップ
-      - name: Node.jsをセットアップ
+      - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
           node-version: "18"
 
-      # pnpmのセットアップ
-      - name: pnpmをセットアップ
+      - name: Install pnpm
         uses: pnpm/action-setup@v2
         with:
           version: 8
-          run_install: false
 
-      # pnpmストアパスの取得（キャッシュ用）
-      - name: pnpmストアディレクトリを取得
-        shell: bash
-        run: |
-          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
-
-      # pnpmキャッシュの設定
-      - name: pnpmキャッシュを設定
-        uses: actions/cache@v3
-        with:
-          path: ${{ env.STORE_PATH }}
-          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
-          restore-keys: |
-            ${{ runner.os }}-pnpm-store-
-
-      # 依存関係のインストール
-      - name: 依存関係をインストール
+      - name: Install dependencies
         run: pnpm install
 
-      # Next.jsのキャッシュ設定
-      - name: Next.jsキャッシュ
-        uses: actions/cache@v3
-        with:
-          path: ${{ github.workspace }}/.next/cache
-          key: ${{ runner.os }}-nextjs-${{ hashFiles('**/pnpm-lock.yaml') }}-${{ hashFiles('**/*.js', '**/*.jsx', '**/*.ts', '**/*.tsx') }}
-          restore-keys: |
-            ${{ runner.os }}-nextjs-${{ hashFiles('**/pnpm-lock.yaml') }}-
-
-      # リントの実行
-      - name: リントを実行
-        run: pnpm lint
-
-      # アプリケーションのビルド
-      - name: アプリケーションをビルド
+      - name: Build Next.js
         run: pnpm build
 
-      # ビルド成果物のアップロード - 修正済み
-      - name: ビルド成果物をアップロード
+      - name: Create test file
+        run: echo "This is a test file" > test.txt
+
+      - name: Upload artifact
         uses: actions/upload-artifact@v3
         with:
-          name: next-build
-          path: .next
-          retention-days: 7
-
-  # デプロイジョブ
-  deploy:
-    needs: build
-    runs-on: ubuntu-latest
-    # mainブランチへのプッシュでのみ実行
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-
-    steps:
-      # リポジトリのチェックアウト
-      - name: リポジトリをチェックアウト
-        uses: actions/checkout@v3
-
-      # Node.jsのセットアップ
-      - name: Node.jsをセットアップ
-        uses: actions/setup-node@v3
-        with:
-          node-version: "18"
-
-      # pnpmのセットアップ
-      - name: pnpmをセットアップ
-        uses: pnpm/action-setup@v2
-        with:
-          version: 8
-          run_install: false
-
-      # 本番環境用の依存関係をインストール
-      - name: 依存関係をインストール
-        run: pnpm install
-
-      # ビルド成果物のダウンロード - artifactの名前を合わせる
-      - name: ビルド成果物をダウンロード
-        uses: actions/download-artifact@v3
-        with:
-          name: next-build
-          path: .next
-
-      # Vercelへのデプロイ（コメントアウト - テスト時にはデプロイ不要）
-      # - name: Vercelへデプロイ
-      #   uses: amondnet/vercel-action@v20
-      #   with:
-      #     vercel-token: ${{ secrets.VERCEL_TOKEN }}
-      #     vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
-      #     vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
-      #     working-directory: ./
-      #     vercel-args: '--prod'
-
-      # 代わりに、デプロイが成功したことをシミュレート
-      - name: デプロイシミュレーション
-        run: |
-          echo "デプロイが成功しました（テスト目的）"
-
-# キャンセル時の設定（同じブランチで新しいコミットがプッシュされた場合）
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+          name: test-files
+          path: test.txt
